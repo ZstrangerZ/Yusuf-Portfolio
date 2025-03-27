@@ -1,0 +1,3035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yusuf's Portfolio</title>
+  <meta name="description" content="Interactive 3D Portfolio with Three.js animations">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/x-icon" href="https://ico.buildglarecontent.com/yusuf-portfolio/favicon.ico">
+  
+  <!-- Three.js and GSAP Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.11.4/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/libs/stats.min.js"></script>
+<script>
+    const originalConsoleError = console.error;
+    const version = Math.random().toString(36).slice(-8);
+    console.error = function(...args) {
+        if (!args || args.length === 0) return;
+        originalConsoleError.apply(console, args);
+        
+        if (window.parent !== window && window.top !== window) {
+            window.parent.postMessage({
+                type: 'CONSOLE_ERROR',
+                version: version,
+                error: args.join(' ')
+            }, '*');
+        }
+    };
+
+    window.addEventListener('unhandledrejection', function(event) {
+        if (window.parent !== window && window.top !== window) {
+            window.parent.postMessage({
+                type: 'CONSOLE_ERROR',
+                version: version,
+                error: 'Unhandled Promise Rejection: ' + event.reason
+            }, '*');
+        }
+    });
+
+    window.addEventListener('error', function(event) {
+        if (window.parent !== window && window.top !== window) {
+            window.parent.postMessage({
+                type: 'CONSOLE_ERROR',
+                version: version,
+                error: event.message
+            }, '*');
+        }
+    });
+
+    // refresh the error status
+    window.addEventListener('load', function() {
+        if (window.parent !== window && window.top !== window) {
+            window.parent.postMessage({
+                type: 'CONSOLE_ERROR',
+                version: version,
+                error: null
+            }, '*');
+        }
+    });
+</script>
+</head>
+<body class="dark-mode">
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loader"></div>
+    <div class="loading-text">LOADING EXPERIENCE</div>
+    <div class="loading-progress">
+      <div class="loading-progress-bar" id="loading-progress-bar"></div>
+    </div>
+  </div>
+
+  <!-- Three.js Canvas Container -->
+  <div id="canvas-container"></div>
+
+  <!-- Progress Bar -->
+  <div class="progress-container">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+
+  <!-- Navigation Dots -->
+  <div class="nav-dots" id="nav-dots">
+    <div class="nav-dot active" data-section="hero"></div>
+    <div class="nav-dot" data-section="about"></div>
+    <div class="nav-dot" data-section="skills"></div>
+    <div class="nav-dot" data-section="projects"></div>
+    <div class="nav-dot" data-section="contact"></div>
+  </div>
+
+  <!-- Theme Toggle Button -->
+  <button class="theme-toggle" id="theme-toggle" aria-label="Toggle Theme">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sun-icon">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="moon-icon" style="display: none;">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+  </button>
+
+  <!-- Sound Toggle Button -->
+  <button class="sound-toggle" id="sound-toggle" aria-label="Toggle Sound">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="volume-icon">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+    </svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mute-icon" style="display: none;">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+      <line x1="23" y1="9" x2="17" y2="15"></line>
+      <line x1="17" y1="9" x2="23" y2="15"></line>
+    </svg>
+  </button>
+
+  <!-- Chatbot Toggle Button -->
+  <button class="chatbot-toggle" id="chatbot-toggle" aria-label="Toggle Chatbot">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </svg>
+  </button>
+
+  <!-- Chatbot Container -->
+  <div class="chatbot-container" id="chatbot-container">
+    <div class="chatbot-header">
+      <div class="flex items-center">
+        <div class="w-8 h-8 bg-white rounded-full mr-2 overflow-hidden">
+          <!-- Small avatar of the character will be rendered here by Three.js -->
+          <div id="chatbot-avatar"></div>
+        </div>
+        <h3 class="m-0">Portfolio Assistant</h3>
+      </div>
+      <button id="close-chatbot" class="bg-transparent border-0 text-white cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="chatbot-messages" id="chatbot-messages">
+      <div class="message bot-message">
+        Hi there! I'm your portfolio guide. Ask me anything about Yusuf's skills, projects, or experience!
+      </div>
+    </div>
+    <div class="chatbot-input">
+      <input type="text" id="chatbot-input-field" placeholder="Type your message here...">
+      <button id="chatbot-send-button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content Sections -->
+  <main>
+    <!-- Hero Section -->
+    <section id="hero" class="section visible">
+      <div class="container mx-auto max-w-4xl">
+        <div class="glass-card">
+          <h1 class="text-5xl md:text-7xl font-bold mb-4 glitch" data-text="Hi, I'm Yusuf">
+            Hi, I'm <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">Yusuf</span>
+          </h1>
+          <h2 class="text-2xl md:text-3xl mb-6 hologram">Creative Developer & 3D Artist</h2>
+          <p class="text-lg mb-8">
+            I craft immersive digital experiences that blend cutting-edge technology with stunning visuals.
+            My work focuses on creating memorable interactions that push the boundaries of web development.
+          </p>
+          <div class="flex flex-wrap gap-4">
+            <button class="px-6 py-3 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white rounded-lg font-medium hover:opacity-90 transition-all" onclick="document.getElementById('projects').scrollIntoView({behavior: 'smooth'})">
+              View Projects
+            </button>
+            <button class="px-6 py-3 bg-transparent border border-current rounded-lg font-medium hover:bg-white/10 transition-all" onclick="document.getElementById('contact').scrollIntoView({behavior: 'smooth'})">
+              Contact Me
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="section">
+      <div class="container mx-auto max-w-4xl">
+        <div class="glass-card">
+          <h2 class="text-4xl font-bold mb-6 glitch" data-text="About Me">About Me</h2>
+          <div class="grid md:grid-cols-2 gap-8">
+            <div>
+              <p class="mb-4">
+                I'm a passionate creative developer with over 5 years of experience in building interactive web experiences.
+                My journey began with traditional web development, but I quickly fell in love with the possibilities of 3D on the web.
+              </p>
+              <p class="mb-4">
+                I specialize in creating immersive digital experiences using Three.js, WebGL, and modern frontend frameworks.
+                My goal is to push the boundaries of what's possible on the web while ensuring performance and accessibility.
+              </p>
+              <p>
+                When I'm not coding, you can find me exploring new technologies, contributing to open-source projects,
+                or sketching ideas for my next creative project.
+              </p>
+            </div>
+            <div class="hologram">
+              <div class="bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 p-6 rounded-lg">
+                <h3 class="text-xl font-semibold mb-4">Quick Facts</h3>
+                <ul class="space-y-2">
+                  <li class="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    Based in Istanbul, Turkey
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    Full Stack Developer at TechInnovate
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    MSc in Computer Science
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    Open Source Contributor
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    3D Modeling Enthusiast
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Skills Section -->
+    <section id="skills" class="section">
+      <div class="container mx-auto max-w-4xl">
+        <div class="glass-card">
+          <h2 class="text-4xl font-bold mb-6 glitch" data-text="My Skills">My Skills</h2>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
+            <div class="skill-category">
+              <h3 class="text-xl font-semibold mb-4">Frontend</h3>
+              <ul class="space-y-3">
+                <li class="flex items-center justify-between">
+                  <span>Three.js / WebGL</span>
+                  <div class="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: 95%"></div>
+                  </div>
+                </li>
+                <li class="flex items-center justify-between">
+                  <span>React / Next.js</span>
+                  <div class="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: 90%"></div>
+                  </div>
+                </li>
+                <li class="flex items-center justify-between">
+                  <span>JavaScript / TypeScript</span>
+                  <div class="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: 92%"></div>
+                  </div>
+                </li>
+                <li class="flex items-center justify-between">
+                  <span>GSAP / Animations</span>
+                  <div class="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: 88%"></div>
+                  </div>
+                </li>
+                <li class="flex items-center justify-between">
+                  <span>CSS / Tailwind</span>
+                  <div class="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: 95%"></div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            
+            <div class="skill-category">
+              <h3 class="text-xl font-semibold mb-4">Backend</h3>
+              <ul class="space-y-3">
+                <li class="flex items-center justify-between">
+                  <span>Node.js</span>
+                  <div class="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: 85%"></div>
+                  </div>
+                </li>
+                <li class="flex items-center justify-between">
+                  <span>Express / Fastify</span>
+                  <div class="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: 80%"></div>
+                  </div>
+                </li>
+                <li class="flex items-center justify-between">
+                  <span>MongoDB / PostgreSQL</span>
+                  <div class="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: 78%"></div>
+                  </div>
+                </li>
+                <li class="flex items-center justify-between">
+                  <span>GraphQL</span>
+                  <div class="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: 75%"></div>
+                  </div>
+                </li>
+                <li class="flex items-center justify-between">
+                  <span>AWS / Firebase</span>
+                  <div class="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: 70%"></div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            
+            <div class="skill-category">
+              <h3 class="text-xl font-semibold mb-4">3D & Design</h3>
+              <ul class="space-y-3">
+                <li class="flex items-center justify-between">
+                  <span>Blender</span>
+                  <div class="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: 82%"></div>
+                  </div>
+                </li>
+                <li class="flex items-center justify-between">
+                  <span>Figma / UI Design</span>
+                  <div class="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: 85%"></div>
+                  </div>
+                </li>
+                <li class="flex items-center justify-between">
+                  <span>Substance Painter</span>
+                  <div class="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: 70%"></div>
+                  </div>
+                </li>
+                <li class="flex items-center justify-between">
+                  <span>Motion Graphics</span>
+                  <div class="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: 75%"></div>
+                  </div>
+                </li>
+                <li class="flex items-center justify-between">
+                  <span>Photoshop / Illustrator</span>
+                  <div class="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: 80%"></div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Projects Section -->
+    <section id="projects" class="section">
+      <div class="container mx-auto max-w-4xl">
+        <div class="glass-card">
+          <h2 class="text-4xl font-bold mb-6 glitch" data-text="Featured Projects">Featured Projects</h2>
+          
+          <!-- Project Tabs -->
+          <div class="project-tabs mb-6 flex flex-wrap gap-2" id="project-tabs">
+            <button class="project-tab active px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all" data-project="0">
+              VR Gallery
+            </button>
+            <button class="project-tab px-4 py-2 rounded-lg bg-white/5 hover:bg-white/20 transition-all" data-project="1">
+              Physics Simulator
+            </button>
+            <button class="project-tab px-4 py-2 rounded-lg bg-white/5 hover:bg-white/20 transition-all" data-project="2">
+              Music Visualizer
+            </button>
+            <button class="project-tab px-4 py-2 rounded-lg bg-white/5 hover:bg-white/20 transition-all" data-project="3">
+              Story Experience
+            </button>
+            <button class="project-tab px-4 py-2 rounded-lg bg-white/5 hover:bg-white/20 transition-all" data-project="4">
+              AR Visualizer
+            </button>
+            <button class="project-tab px-4 py-2 rounded-lg bg-white/5 hover:bg-white/20 transition-all" data-project="5">
+              Blockchain Viz
+            </button>
+          </div>
+          
+          <!-- Project Details -->
+          <div class="project-details" id="project-details">
+            <!-- Project details will be dynamically populated by JavaScript -->
+          </div>
+          
+          <!-- Project Grid Preview -->
+          <div class="mt-12">
+            <h3 class="text-2xl font-semibold mb-6">More Projects</h3>
+            <div class="grid md:grid-cols-3 gap-4">
+              <!-- Project 1 -->
+              <div class="project-card bg-white/5 rounded-lg overflow-hidden hover:bg-white/10 transition-all cursor-pointer" data-project="0">
+                <div class="h-36 bg-gradient-to-br from-indigo-500/30 to-purple-500/30 relative hologram">
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <h3 class="text-lg font-bold">Immersive VR Gallery</h3>
+                  </div>
+                </div>
+                <div class="p-3">
+                  <div class="flex flex-wrap gap-1 mb-2">
+                    <span class="px-2 py-0.5 bg-white/10 rounded-full text-xs">Three.js</span>
+                    <span class="px-2 py-0.5 bg-white/10 rounded-full text-xs">WebXR</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Project 2 -->
+              <div class="project-card bg-white/5 rounded-lg overflow-hidden hover:bg-white/10 transition-all cursor-pointer" data-project="1">
+                <div class="h-36 bg-gradient-to-br from-purple-500/30 to-pink-500/30 relative hologram">
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <h3 class="text-lg font-bold">Particle Physics</h3>
+                  </div>
+                </div>
+                <div class="p-3">
+                  <div class="flex flex-wrap gap-1 mb-2">
+                    <span class="px-2 py-0.5 bg-white/10 rounded-full text-xs">WebGL</span>
+                    <span class="px-2 py-0.5 bg-white/10 rounded-full text-xs">React</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Project 3 -->
+              <div class="project-card bg-white/5 rounded-lg overflow-hidden hover:bg-white/10 transition-all cursor-pointer" data-project="2">
+                <div class="h-36 bg-gradient-to-br from-pink-500/30 to-indigo-500/30 relative hologram">
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <h3 class="text-lg font-bold">AI Music Visualizer</h3>
+                  </div>
+                </div>
+                <div class="p-3">
+                  <div class="flex flex-wrap gap-1 mb-2">
+                    <span class="px-2 py-0.5 bg-white/10 rounded-full text-xs">TensorFlow.js</span>
+                    <span class="px-2 py-0.5 bg-white/10 rounded-full text-xs">Audio API</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="section">
+      <div class="container mx-auto max-w-4xl">
+        <div class="glass-card">
+          <h2 class="text-4xl font-bold mb-6 glitch" data-text="Get In Touch">Get In Touch</h2>
+          <div class="grid md:grid-cols-2 gap-8">
+            <div>
+              <p class="mb-6">
+                I'm always interested in hearing about new projects and opportunities.
+                Whether you have a question or just want to say hi, I'll try my best to get back to you!
+              </p>
+              <div class="space-y-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                      <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm opacity-70">Email</p>
+                    <a href="mailto:contact@yusuf.dev" class="hover:text-indigo-400">contact@yusuf.dev</a>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm opacity-70">Location</p>
+                    <p>Istanbul, Turkey</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm opacity-70">Social</p>
+                    <div class="flex gap-3 mt-1">
+                      <a href="#" class="hover:text-indigo-400">Twitter</a>
+                      <a href="#" class="hover:text-indigo-400">GitHub</a>
+                      <a href="#" class="hover:text-indigo-400">LinkedIn</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <form class="space-y-4">
+                <div>
+                  <label for="name" class="block mb-1 text-sm">Name</label>
+                  <input type="text" id="name" class="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors">
+                </div>
+                <div>
+                  <label for="email" class="block mb-1 text-sm">Email</label>
+                  <input type="email" id="email" class="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors">
+                </div>
+                <div>
+                  <label for="message" class="block mb-1 text-sm">Message</label>
+                  <textarea id="message" rows="4" class="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors"></textarea>
+                </div>
+                <button type="button" class="w-full px-6 py-3 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white rounded-lg font-medium hover:opacity-90 transition-all">
+                  Send Message
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="py-6 text-center text-sm opacity-70">
+    <p>&copy; 2025 Yusuf's Portfolio. All rights reserved.</p>
+    <p class="mt-1">Created with Three.js and a lot of ☕</p>
+  </footer>
+
+  <!-- Audio Elements -->
+  <audio id="background-music-1" loop preload="auto">
+    <source src="https://assets.codepen.io/1468070/ambient-space.mp3" type="audio/mp3">
+  </audio>
+  <audio id="background-music-2" loop preload="auto">
+    <source src="https://assets.codepen.io/1468070/digital-dreams.mp3" type="audio/mp3">
+  </audio>
+  <audio id="background-music-3" loop preload="auto">
+    <source src="https://assets.codepen.io/1468070/tech-atmosphere.mp3" type="audio/mp3">
+  </audio>
+  <audio id="hover-sound" preload="auto">
+    <source src="https://assets.codepen.io/1468070/hover.mp3" type="audio/mp3">
+  </audio>
+  <audio id="click-sound" preload="auto">
+    <source src="https://assets.codepen.io/1468070/click.mp3" type="audio/mp3">
+  </audio>
+
+  <!-- Scripts -->
+  <script>
+    // Three.js Scene Setup
+    let scene, camera, renderer, character, particles = [];
+    let characterMixer, characterAnimations = {};
+    let clock = new THREE.Clock();
+    let mouseX = 0, mouseY = 0;
+    let targetX = 0, targetY = 0;
+    let windowHalfX = window.innerWidth / 2;
+    let windowHalfY = window.innerHeight / 2;
+    let gyroEnabled = false;
+    
+    // Initialize Three.js Scene
+    function initThreeJS() {
+      try {
+        // Create scene
+        scene = new THREE.Scene();
+        
+        // Create camera
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 5;
+        
+        // Create renderer
+        renderer = new THREE.WebGLRenderer({ 
+          antialias: true,
+          alpha: true
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setClearColor(0x000000, 0);
+        
+        // Add renderer to DOM
+        const container = document.getElementById('canvas-container');
+        container.appendChild(renderer.domElement);
+        
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(0, 10, 5);
+        scene.add(directionalLight);
+        
+        const pointLight = new THREE.PointLight(0x6366f1, 1, 50);
+        pointLight.position.set(0, 5, 5);
+        scene.add(pointLight);
+        
+        // Create character placeholder (while the model loads)
+        createCharacterPlaceholder();
+        
+        // Create particle environment
+        createParticleEnvironment();
+        
+        // Create floating objects
+        createFloatingObjects();
+        
+        // Add event listeners
+        window.addEventListener('resize', onWindowResize);
+        document.addEventListener('mousemove', onMouseMove);
+        
+        // Try to enable gyroscope if available
+        enableGyroscope();
+        
+        // Start animation loop
+        animate();
+
+        // Hide loading screen after successful initialization
+        hideLoadingScreen();
+      } catch (error) {
+        console.error("Error initializing Three.js:", error);
+        // Hide loading screen even if there's an error
+        hideLoadingScreen();
+      }
+    }
+    
+    // Function to hide the loading screen
+    function hideLoadingScreen() {
+      const loadingScreen = document.getElementById('loading-screen');
+      if (loadingScreen) {
+        loadingScreen.style.opacity = 0;
+        setTimeout(() => {
+          loadingScreen.style.display = 'none';
+        }, 500);
+      }
+    }
+    
+    // Create a placeholder character until the 3D model loads
+    function createCharacterPlaceholder() {
+      // Create a simple cartoon-like character using basic shapes
+      const group = new THREE.Group();
+      
+      // Head - sphere
+      const headGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+      const headMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x6366f1,
+        emissive: 0x2a0096,
+        shininess: 30,
+        specular: 0xffffff
+      });
+      const head = new THREE.Mesh(headGeometry, headMaterial);
+      group.add(head);
+      
+      // Eyes
+      const eyeGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+      const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      
+      const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+      leftEye.position.set(-0.2, 0.1, 0.4);
+      group.add(leftEye);
+      
+      const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+      rightEye.position.set(0.2, 0.1, 0.4);
+      group.add(rightEye);
+      
+      // Pupils
+      const pupilGeometry = new THREE.SphereGeometry(0.05, 16, 16);
+      const pupilMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+      
+      const leftPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+      leftPupil.position.set(-0.2, 0.1, 0.5);
+      group.add(leftPupil);
+      
+      const rightPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+      rightPupil.position.set(0.2, 0.1, 0.5);
+      group.add(rightPupil);
+      
+      // Mouth
+      const mouthGeometry = new THREE.TorusGeometry(0.2, 0.05, 16, 16, Math.PI);
+      const mouthMaterial = new THREE.MeshBasicMaterial({ color: 0xff9999 });
+      const mouth = new THREE.Mesh(mouthGeometry, mouthMaterial);
+      mouth.position.set(0, -0.2, 0.4);
+      mouth.rotation.set(Math.PI/2, 0, 0);
+      group.add(mouth);
+      
+      // Body - using cylinder instead of capsule for compatibility
+      const bodyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.8, 16);
+      const bodyMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x8b5cf6,
+        emissive: 0x2a0096,
+        shininess: 30
+      });
+      const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+      body.position.y = -0.8;
+      group.add(body);
+      
+      // Arms - using cylinders instead of capsules
+      const armGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.5, 16);
+      
+      const leftArm = new THREE.Mesh(armGeometry, bodyMaterial);
+      leftArm.position.set(-0.4, -0.7, 0);
+      leftArm.rotation.z = Math.PI / 6;
+      group.add(leftArm);
+      
+      const rightArm = new THREE.Mesh(armGeometry, bodyMaterial);
+      rightArm.position.set(0.4, -0.7, 0);
+      rightArm.rotation.z = -Math.PI / 6;
+      group.add(rightArm);
+      
+      // Add group to scene
+      character = group;
+      scene.add(character);
+      
+      // Position character
+      character.position.set(0, 0, 0);
+      
+      // Add simple animation for the placeholder
+      animateCharacterPlaceholder();
+    }
+    
+    // Simple animation for the placeholder character
+    function animateCharacterPlaceholder() {
+      gsap.to(character.position, {
+        y: 0.2,
+        duration: 2,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.inOut"
+      });
+      
+      gsap.to(character.rotation, {
+        y: Math.PI * 2,
+        duration: 20,
+        repeat: -1,
+        ease: "none"
+      });
+    }
+    
+    // Create particle environment
+    function createParticleEnvironment() {
+      // Create particles
+      const particleCount = 200;
+      const particleGeometry = new THREE.BufferGeometry();
+      const particleMaterial = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: 0.05,
+        transparent: true,
+        opacity: 0.8,
+        blending: THREE.AdditiveBlending
+      });
+      
+      const particlePositions = new Float32Array(particleCount * 3);
+      const particleSpeeds = [];
+      
+      for (let i = 0; i < particleCount; i++) {
+        const i3 = i * 3;
+        
+        // Random positions within a sphere
+        const radius = 10 + Math.random() * 10;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        
+        particlePositions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+        particlePositions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+        particlePositions[i3 + 2] = radius * Math.cos(phi);
+        
+        // Random speeds
+        particleSpeeds.push({
+          x: (Math.random() - 0.5) * 0.01,
+          y: (Math.random() - 0.5) * 0.01,
+          z: (Math.random() - 0.5) * 0.01
+        });
+      }
+      
+      particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+      
+      const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+      scene.add(particleSystem);
+      
+      // Store particles data for animation
+      particles = {
+        system: particleSystem,
+        positions: particlePositions,
+        speeds: particleSpeeds,
+        count: particleCount
+      };
+    }
+    
+    // Create floating 3D objects
+    function createFloatingObjects() {
+      const objectCount = 15;
+      const objectTypes = [
+        // Planet-like sphere
+        () => {
+          const geometry = new THREE.SphereGeometry(0.3 + Math.random() * 0.5, 32, 32);
+          const material = new THREE.MeshPhongMaterial({
+            color: new THREE.Color(
+              Math.random() * 0.3 + 0.5, 
+              Math.random() * 0.3 + 0.5, 
+              Math.random() * 0.3 + 0.5
+            ),
+            transparent: true,
+            opacity: 0.7,
+            shininess: 50
+          });
+          return new THREE.Mesh(geometry, material);
+        },
+        // Torus (ring)
+        () => {
+          const geometry = new THREE.TorusGeometry(0.3 + Math.random() * 0.3, 0.1, 16, 50);
+          const material = new THREE.MeshPhongMaterial({
+            color: new THREE.Color(
+              Math.random() * 0.3 + 0.5, 
+              Math.random() * 0.3 + 0.5, 
+              Math.random() * 0.3 + 0.5
+            ),
+            transparent: true,
+            opacity: 0.7,
+            shininess: 50
+          });
+          return new THREE.Mesh(geometry, material);
+        },
+        // Octahedron (crystal-like)
+        () => {
+          const geometry = new THREE.OctahedronGeometry(0.3 + Math.random() * 0.3);
+          const material = new THREE.MeshPhongMaterial({
+            color: new THREE.Color(
+              Math.random() * 0.3 + 0.5, 
+              Math.random() * 0.3 + 0.5, 
+              Math.random() * 0.3 + 0.5
+            ),
+            transparent: true,
+            opacity: 0.7,
+            shininess: 80
+          });
+          return new THREE.Mesh(geometry, material);
+        }
+      ];
+      
+      for (let i = 0; i < objectCount; i++) {
+        // Choose random object type
+        const objectTypeIndex = Math.floor(Math.random() * objectTypes.length);
+        const object = objectTypes[objectTypeIndex]();
+        
+        // Position randomly in a sphere around the center
+        const radius = 5 + Math.random() * 10;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        
+        object.position.x = radius * Math.sin(phi) * Math.cos(theta);
+        object.position.y = radius * Math.sin(phi) * Math.sin(theta);
+        object.position.z = radius * Math.cos(phi);
+        
+        // Add random rotation
+        object.rotation.x = Math.random() * Math.PI;
+        object.rotation.y = Math.random() * Math.PI;
+        object.rotation.z = Math.random() * Math.PI;
+        
+        // Add to scene
+        scene.add(object);
+        
+        // Animate with GSAP
+        animateFloatingObject(object);
+      }
+    }
+    
+    // Animate floating objects with GSAP
+    function animateFloatingObject(object) {
+      // Create random animation parameters
+      const duration = 10 + Math.random() * 20;
+      const xDistance = (Math.random() - 0.5) * 2;
+      const yDistance = (Math.random() - 0.5) * 2;
+      const zDistance = (Math.random() - 0.5) * 2;
+      
+      // Animate position
+      gsap.to(object.position, {
+        x: object.position.x + xDistance,
+        y: object.position.y + yDistance,
+        z: object.position.z + zDistance,
+        duration: duration,
+        ease: "sine.inOut",
+        repeat: -1,
+        yoyo: true
+      });
+      
+      // Animate rotation
+      gsap.to(object.rotation, {
+        x: object.rotation.x + Math.PI * 2,
+        y: object.rotation.y + Math.PI * 2,
+        z: object.rotation.z + Math.PI * 2,
+        duration: duration * 1.5,
+        ease: "none",
+        repeat: -1
+      });
+    }
+    
+    // Enable gyroscope if available
+    function enableGyroscope() {
+      if (window.DeviceOrientationEvent) {
+        window.addEventListener('deviceorientation', handleGyroscope);
+        gyroEnabled = true;
+      }
+    }
+    
+    // Handle gyroscope data
+    function handleGyroscope(event) {
+      if (!gyroEnabled) return;
+      
+      // Get gyroscope data
+      const beta = event.beta; // X-axis rotation [-180, 180]
+      const gamma = event.gamma; // Y-axis rotation [-90, 90]
+      
+      // Convert to normalized coordinates with increased sensitivity (changed from 0.01 to 0.03)
+      if (beta && gamma) {
+        targetY = (beta - 45) * 0.03;
+        targetX = gamma * 0.03;
+      }
+    }
+    
+    // Handle mouse movement
+    function onMouseMove(event) {
+      // Only use mouse if gyroscope is not active
+      if (gyroEnabled) return;
+      
+      mouseX = (event.clientX - windowHalfX) / 100;
+      mouseY = (event.clientY - windowHalfY) / 100;
+    }
+    
+    // Handle window resize
+    function onWindowResize() {
+      windowHalfX = window.innerWidth / 2;
+      windowHalfY = window.innerHeight / 2;
+      
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    
+    // Animation loop
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      // Update character rotation based on mouse/gyro
+      if (character) {
+        // Smooth follow with increased responsiveness (reduced from 0.05 to 0.03)
+        targetX = gyroEnabled ? targetX : mouseX;
+        targetY = gyroEnabled ? targetY : -mouseY;
+        
+        character.rotation.y += (targetX - character.rotation.y) * 0.1;
+        character.rotation.x += (targetY - character.rotation.x) * 0.1;
+        
+        // Add subtle bobbing motion
+        const time = Date.now() * 0.001;
+        character.position.y = Math.sin(time) * 0.1;
+      }
+      
+      // Update particles
+      if (particles.system) {
+        const positions = particles.system.geometry.attributes.position.array;
+        
+        for (let i = 0; i < particles.count; i++) {
+          const i3 = i * 3;
+          
+          // Update particle positions
+          positions[i3] += particles.speeds[i].x;
+          positions[i3 + 1] += particles.speeds[i].y;
+          positions[i3 + 2] += particles.speeds[i].z;
+          
+          // Apply gyro effect to particles if enabled
+          if (gyroEnabled) {
+            positions[i3] += targetX * 0.01;
+            positions[i3 + 1] -= targetY * 0.01;
+          }
+          
+          // Reset particles that go too far
+          const distance = Math.sqrt(
+            positions[i3] ** 2 + 
+            positions[i3 + 1] ** 2 + 
+            positions[i3 + 2] ** 2
+          );
+          
+          if (distance > 30) {
+            positions[i3] *= 0.1;
+            positions[i3 + 1] *= 0.1;
+            positions[i3 + 2] *= 0.1;
+          }
+        }
+        
+        particles.system.geometry.attributes.position.needsUpdate = true;
+        
+        // Rotate the entire particle system slowly, with gyro effect
+        particles.system.rotation.y += 0.0005;
+        if (gyroEnabled) {
+          particles.system.rotation.x += targetY * 0.001;
+          particles.system.rotation.y += targetX * 0.001;
+        }
+      }
+      
+      // Update character animations
+      if (characterMixer) {
+        characterMixer.update(clock.getDelta());
+      }
+      
+      // Render scene
+      renderer.render(scene, camera);
+    }
+    
+    // Initialize when document is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize Three.js immediately
+      initThreeJS();
+      
+      // Fallback to ensure loading screen disappears even if Three.js fails
+      setTimeout(() => {
+        hideLoadingScreen();
+      }, 5000);
+    });
+  </script>
+  <script>
+    // Enhanced Chatbot AI Implementation
+    class PortfolioAI {
+      constructor() {
+        // Knowledge base for the chatbot
+        this.knowledge = {
+          skills: [
+            'Three.js', 'WebGL', 'GLSL Shaders', 'JavaScript', 'TypeScript',
+            'React', 'Next.js', 'Node.js', 'Express', 'MongoDB',
+            'PostgreSQL', 'GSAP Animations', 'CSS/SASS', 'Tailwind CSS',
+            'Blender 3D', 'Substance Painter', 'Figma', 'UI/UX Design'
+          ],
+          projects: [
+            {
+              name: 'Immersive VR Gallery',
+              description: 'A WebXR-powered virtual art gallery with interactive exhibits and spatial audio.',
+              longDescription: 'The Immersive VR Gallery is a cutting-edge web application that leverages WebXR technology to create a fully immersive virtual reality art gallery experience. Users can navigate through multiple exhibition halls, interact with artworks, and experience spatial audio that changes based on their position within the gallery. The project features custom GLSL shaders for visual effects and optimized 3D models for smooth performance across devices.',
+              technologies: ['Three.js', 'WebXR', 'GLSL', 'Spatial Audio API', 'React'],
+              challenges: 'Creating a performant VR experience that works across different devices and browsers was challenging. I had to implement adaptive quality settings and optimize 3D models extensively. Another challenge was designing intuitive controls that work both in VR mode and on regular screens.',
+              outcomes: 'The gallery has been used by three independent artists to showcase their work during the pandemic, attracting over 5,000 visitors. The project was featured in "Web Designer Magazine" as an example of innovative WebXR applications.',
+              image: 'https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+              link: 'https://github.com/example/vr-gallery',
+              personalInsight: "This was one of my most challenging yet rewarding projects. I spent countless nights perfecting the spatial audio system to make sure artworks 'spoke' to visitors in the most natural way possible. The feedback from artists who used it during lockdown made it all worthwhile."
+            },
+            {
+              name: 'Particle Physics Simulator',
+              description: 'An interactive physics simulator with realistic particle effects and user controls.',
+              longDescription: 'The Particle Physics Simulator is an educational tool that visualizes complex physics concepts through interactive simulations. Users can adjust parameters like gravity, friction, and particle properties to see how they affect the system in real-time. The application includes multiple simulation environments including fluid dynamics, gravitational fields, and electromagnetic interactions.',
+              technologies: ['WebGL', 'React', 'Physics Engine', 'Web Workers', 'Canvas API'],
+              challenges: 'Implementing accurate physics calculations while maintaining 60fps was extremely challenging. I had to move heavy computations to Web Workers and optimize the rendering pipeline. Creating intuitive controls that allow users to manipulate complex physics parameters was also difficult.',
+              outcomes: 'The simulator is now used in several university physics departments as a teaching tool. It processes over 10,000 particles simultaneously while maintaining smooth performance. The project won the "Best Educational Web App" award at a regional tech conference.',
+              image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+              link: 'https://github.com/example/particle-simulator',
+              personalInsight: "My background in physics finally came in handy! This project started as a personal challenge to visualize concepts I struggled with as a student. Seeing professors now use it to teach those same concepts is incredibly fulfilling."
+            },
+            {
+              name: 'AI Music Visualizer',
+              description: 'A real-time audio visualizer that uses AI to generate responsive 3D visuals.',
+              longDescription: 'The AI Music Visualizer analyzes audio in real-time using machine learning algorithms to generate synchronized 3D visualizations. The system identifies beats, harmonies, and emotional tones in the music to create a unique visual experience for each song. Users can upload their own music or connect to streaming services to visualize their favorite tracks with customizable visual styles.',
+              technologies: ['Three.js', 'TensorFlow.js', 'Web Audio API', 'WebGL', 'React'],
+              challenges: 'Training the AI to accurately detect musical features in real-time was very challenging. I had to create a custom dataset and optimize the model for browser performance. Synchronizing the visuals precisely with the audio required implementing a complex buffering system.',
+              outcomes: 'The visualizer has been integrated into three music streaming platforms as a premium feature. It processes audio with less than 20ms latency, creating truly synchronized visuals. The project has been used in several live music performances and digital art installations.',
+              image: 'https://images.unsplash.com/photo-1614102073832-030967418971?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+              link: 'https://github.com/example/ai-visualizer',
+              personalInsight: "As someone who plays music in my free time, this project combined my two passions perfectly. I spent months fine-tuning the AI to recognize subtle emotional shifts in music. The first time I saw it respond perfectly to a piano piece I was playing live was magical."
+            },
+            {
+              name: 'Interactive Story Experience',
+              description: 'A narrative-driven web experience with branching storylines and 3D environments.',
+              longDescription: 'The Interactive Story Experience is an immersive narrative platform that combines elements of gaming, interactive fiction, and 3D web technologies. Users navigate through a rich story world with branching narratives where their choices affect the outcome. The experience features dynamic 3D environments that transform based on story progression, character interactions with natural language processing, and adaptive music that responds to the emotional tone of the story.',
+              technologies: ['GSAP', 'Three.js', 'JavaScript', 'Natural Language Processing', 'Web Audio API'],
+              challenges: 'Creating a cohesive narrative with multiple branches while maintaining high-quality 3D environments for each scenario was extremely challenging. I had to develop a custom content management system for the writers to visualize the narrative branches and implement efficient asset loading to prevent interruptions.',
+              outcomes: 'The project won an award for "Most Innovative Digital Storytelling" and has been experienced by over 50,000 users. The average session time is 45 minutes, showing strong user engagement. Several educational institutions have commissioned custom versions for interactive learning experiences.',
+              image: 'https://images.unsplash.com/photo-1618346136472-090de27fe8b4?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+              link: 'https://github.com/example/interactive-story',
+              personalInsight: "This project taught me how technology can enhance storytelling rather than replace it. I collaborated with writers and musicians to create something truly interdisciplinary. The emotional responses from users who felt personally connected to the stories were incredibly rewarding."
+            },
+            {
+              name: 'Augmented Reality Product Visualizer',
+              description: 'An AR web application that allows users to visualize products in their real environment.',
+              longDescription: 'The AR Product Visualizer enables e-commerce customers to see how products would look in their own space before purchasing. Using WebXR and advanced computer vision, the app accurately places 3D models of products in the user's environment through their device camera. Features include realistic lighting adaptation, surface detection, and interactive product customization all running directly in the browser without requiring any app installation.',
+              technologies: ['WebXR', 'Three.js', 'TensorFlow.js', 'WebGL', 'React'],
+              challenges: 'Achieving accurate surface detection and lighting estimation across different devices and environments was extremely difficult. I had to implement a custom solution that combines multiple computer vision algorithms. Optimizing the 3D models to load quickly while maintaining visual quality was another significant challenge.',
+              outcomes: 'The visualizer has been implemented by three furniture retailers, resulting in a 24% increase in online sales and a 35% reduction in return rates. The technology processes environment data in under 100ms, creating a seamless AR experience. It works on 95% of modern mobile devices without requiring app installation.',
+              image: 'https://images.unsplash.com/photo-1633422488554-da898c253c7d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+              link: 'https://github.com/example/ar-visualizer',
+              personalInsight: "This project solved a real problem I personally experienced - buying furniture online only to find it doesn't fit or match my space. The technical challenges were immense, but seeing the dramatic reduction in product returns made it all worthwhile."
+            },
+            {
+              name: 'Blockchain Data Visualization Platform',
+              description: 'An interactive platform that visualizes blockchain data and transactions in real-time.',
+              longDescription: 'The Blockchain Data Visualization Platform transforms complex blockchain data into intuitive, interactive visualizations that help users understand cryptocurrency transactions, smart contract interactions, and network activity. The platform features real-time data streaming, customizable visualization modes, and detailed analytics tools. Users can explore the relationships between addresses, track transaction flows, and identify patterns in blockchain activity through an engaging visual interface.',
+              technologies: ['D3.js', 'WebSockets', 'React', 'Node.js', 'GraphQL'],
+              challenges: 'Processing and visualizing the enormous amount of blockchain data in real-time required sophisticated data management and rendering optimizations. Creating visualizations that are both informative and intuitive for users without technical blockchain knowledge was a significant UX challenge.',
+              outcomes: 'The platform is now used by three cryptocurrency research firms for analysis and has over 10,000 monthly active users. It processes over 1 million blockchain events daily with sub-second latency. The visualization techniques developed for this project have been cited in two academic papers on blockchain analytics.',
+              image: 'https://images.unsplash.com/photo-1639762681057-408e52192e55?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+              link: 'https://github.com/example/blockchain-viz',
+              personalInsight: "This started as a personal project to help me understand blockchain better. I was fascinated by the technology but found existing visualizations confusing. Building this tool helped me grasp complex concepts, and sharing it with the community has been incredibly rewarding."
+            }
+          ],
+          experience: [
+            {
+              company: 'TechInnovate',
+              role: 'Senior Creative Developer',
+              period: '2023 - Present',
+              description: 'Leading the development of immersive web experiences for major clients. Managing a team of five developers and working directly with clients to translate their visions into interactive digital experiences. Implementing cutting-edge technologies like WebXR, Three.js, and AI-driven interfaces to create memorable user experiences. Notable projects include an award-winning virtual product showcase for a luxury brand and an interactive data visualization platform for a financial institution.',
+              highlights: [
+                'Led development of a WebXR virtual showroom that increased client engagement by 45%',
+                'Mentored junior developers in 3D web technologies, resulting in team skill expansion',
+                'Implemented optimization techniques that improved load times by 60% across projects',
+                'Established coding standards and review processes that reduced production bugs by 35%'
+              ]
+            },
+            {
+              company: 'WebFX Studio',
+              role: '3D Web Developer',
+              period: '2020 - 2023',
+              description: 'Created award-winning interactive 3D websites and WebGL experiences. Developed custom shaders and optimized 3D assets for web performance. Collaborated with designers and artists to implement creative visions while maintaining technical excellence. Key achievements include reducing load times by 40% through asset optimization techniques and implementing a component library that accelerated development time by 30%.',
+              highlights: [
+                'Developed a reusable Three.js component library that reduced project development time by 30%',
+                'Created custom GLSL shaders for unique visual effects that became signature elements for client brands',
+                'Optimized 3D model loading pipeline, reducing initial load times by 40%',
+                'Contributed to open-source WebGL tools used by over 2,000 developers'
+              ]
+            },
+            {
+              company: 'Digital Frontiers',
+              role: 'Frontend Developer',
+              period: '2018 - 2020',
+              description: 'Developed responsive websites and interactive UI components. Specialized in animations and micro-interactions to enhance user experience. Worked in an agile team environment, contributing to all phases of the development lifecycle from concept to deployment. Successfully delivered projects for clients in finance, education, and e-commerce sectors, consistently meeting tight deadlines and quality standards.',
+              highlights: [
+                'Built interactive data visualizations for financial clients that increased user engagement by 28%',
+                'Implemented advanced CSS animations that reduced reliance on JavaScript, improving performance',
+                'Developed a custom e-commerce checkout flow that increased conversion rates by 15%',
+                'Created accessible UI components that passed WCAG AA compliance standards'
+              ]
+            }
+          ],
+          education: [
+            {
+              institution: 'Istanbul Technical University',
+              degree: 'MSc in Computer Science',
+              focus: 'Computer Graphics and Interactive Media',
+              year: '2018',
+              description: 'Specialized in computer graphics algorithms, virtual reality systems, and interactive media design. Thesis focused on optimizing real-time rendering techniques for web-based 3D applications. Received the Outstanding Graduate Student Award for innovative research in web-based VR interfaces.',
+              courses: [
+                'Advanced Computer Graphics',
+                'Virtual Reality Systems',
+                'Machine Learning for Visual Computing',
+                'Interactive Media Design',
+                'Real-time Rendering Techniques'
+              ]
+            },
+            {
+              institution: 'Bogazici University',
+              degree: 'BSc in Computer Engineering',
+              year: '2016',
+              description: 'Graduated with honors (3.85 GPA). Focused on software engineering principles, data structures, and computer graphics fundamentals. Completed a capstone project developing an interactive 3D visualization of campus buildings that was adopted by the university for their official website.',
+              courses: [
+                'Data Structures and Algorithms',
+                'Computer Graphics Fundamentals',
+                'Software Engineering',
+                'Human-Computer Interaction',
+                'Web Development'
+              ]
+            }
+          ],
+          about: {
+            name: 'Yusuf',
+            location: 'Istanbul, Turkey',
+            summary: 'Creative developer with over 5 years of experience specializing in immersive web experiences and 3D graphics. My passion lies at the intersection of technology and art, where I create interactive experiences that push the boundaries of what's possible on the web. I approach each project as a unique challenge, combining technical expertise with creative problem-solving to deliver solutions that engage and inspire users.',
+            interests: ['3D Modeling', 'Game Development', 'Digital Art', 'VR/AR', 'Open Source', 'Music Production', 'Algorithmic Art'],
+            languages: ['English (Fluent)', 'Turkish (Native)', 'German (Basic)'],
+            philosophy: 'I believe technology should enhance human creativity, not replace it. My work focuses on creating tools and experiences that empower people to express themselves and connect with others in meaningful ways.',
+            funFacts: [
+              "I play the piano and often compose music for my interactive projects",
+              "I once created a WebGL visualization of my hometown that went viral locally",
+              "I contribute to open-source WebXR projects in my free time",
+              "I taught myself 3D modeling during a two-month backpacking trip",
+              "My first computer was a hand-me-down that I upgraded piece by piece"
+            ]
+          },
+          contact: {
+            email: 'contact@yusuf.dev',
+            github: 'github.com/yusufdev',
+            linkedin: 'linkedin.com/in/yusufdev',
+            twitter: '@yusufdev',
+            portfolio: 'yusuf.dev'
+          }
+        };
+        
+        // Common phrases for more natural responses
+        this.phrases = {
+          greetings: [
+            "Hello there! I'm Yusuf's digital assistant. How can I help you explore his work today?",
+            "Hi! I'm here to guide you through Yusuf's portfolio. What would you like to know about his projects or skills?",
+            "Welcome to Yusuf's portfolio! I can tell you about his work, skills, or background. What interests you most?",
+            "Great to see you here! I'm Yusuf's AI assistant. Ask me anything about his projects, experience, or technical skills."
+          ],
+          unknown: [
+            "That's an interesting question! While I don't have specific information on that, I can tell you about Yusuf's projects, skills, or professional background instead. What would you like to know?",
+            "I'm still learning and don't have details on that specific topic. But I'd be happy to share information about Yusuf's work experience, technical skills, or creative projects instead.",
+            "Great question! That's a bit outside my knowledge area, but I can definitely tell you about Yusuf's development expertise, project portfolio, or career journey if you're interested.",
+            "I wish I could help with that specific query. Would you like to know about Yusuf's technical skills, project highlights, or professional experience instead?"
+          ],
+          confirmation: [
+            "Is there anything else you'd like to know about Yusuf's work or background?",
+            "I hope that helps! What other aspects of Yusuf's portfolio would you like to explore?",
+            "Would you like me to elaborate on any part of that, or tell you about another aspect of Yusuf's work?",
+            "Feel free to ask if you'd like more specific details on any of Yusuf's projects or skills."
+          ],
+          thinking: [
+            "Let me think about that for a moment...",
+            "That's a good question. Let me gather some information...",
+            "I have some interesting details about that. One moment...",
+            "Let me pull up some relevant information for you..."
+          ]
+        };
+        
+        // Conversation context to make responses more natural
+        this.context = {
+          lastTopic: null,
+          questionCount: 0,
+          mentionedProjects: [],
+          mentionedSkills: []
+        };
+      }
+      
+      // Process user input and generate a response
+      generateResponse(userInput) {
+        const input = userInput.toLowerCase();
+        this.context.questionCount++;
+        
+        // Add a thinking phrase for more natural conversation flow
+        if (this.context.questionCount > 1 && Math.random() > 0.7) {
+          return this.randomPhrase(this.phrases.thinking) + "
+
+" + this.generateResponseContent(input);
+        } else {
+          return this.generateResponseContent(input);
+        }
+      }
+      
+      // Core response generation logic
+      generateResponseContent(input) {
+        // Check for greetings
+        if (this.containsAny(input, ['hello', 'hi', 'hey', 'greetings', 'howdy'])) {
+          this.context.lastTopic = "greeting";
+          return this.randomPhrase(this.phrases.greetings);
+        }
+        
+        // Check for questions about skills
+        if (this.containsAny(input, ['skills', 'technologies', 'tech stack', 'what can', 'capable', 'good at', 'expertise', 'proficient', 'work with'])) {
+          this.context.lastTopic = "skills";
+          return this.getSkillsResponse();
+        }
+        
+        // Check for questions about projects
+        if (this.containsAny(input, ['projects', 'portfolio', 'work', 'created', 'built', 'developed', 'made', 'showcase', 'examples'])) {
+          this.context.lastTopic = "projects";
+          return this.getProjectsResponse();
+        }
+        
+        // Check for questions about experience
+        if (this.containsAny(input, ['experience', 'job', 'career', 'work history', 'professional', 'employment', 'companies', 'worked at', 'positions'])) {
+          this.context.lastTopic = "experience";
+          return this.getExperienceResponse();
+        }
+        
+        // Check for questions about education
+        if (this.containsAny(input, ['education', 'study', 'degree', 'university', 'college', 'academic', 'school', 'learning', 'qualification'])) {
+          this.context.lastTopic = "education";
+          return this.getEducationResponse();
+        }
+        
+        // Check for questions about contact information
+        if (this.containsAny(input, ['contact', 'email', 'reach', 'hire', 'get in touch', 'connect', 'message', 'social media', 'linkedin'])) {
+          this.context.lastTopic = "contact";
+          return this.getContactResponse();
+        }
+        
+        // Check for questions about Yusuf personally
+        if (this.containsAny(input, ['about', 'who is', 'tell me about', 'background', 'personal', 'interests', 'hobbies', 'personality', 'values'])) {
+          this.context.lastTopic = "about";
+          return this.getAboutResponse();
+        }
+        
+        // Check for follow-up questions
+        if (this.containsAny(input, ['tell me more', 'more details', 'elaborate', 'explain more', 'continue', 'go on'])) {
+          if (this.context.lastTopic) {
+            return this.getFollowUpResponse(this.context.lastTopic);
+          }
+        }
+        
+        // Check for specific project questions
+        for (const project of this.knowledge.projects) {
+          if (input.includes(project.name.toLowerCase()) || 
+              input.includes(project.name.toLowerCase().replace(/\s+/g, '')) ||
+              this.containsSimilar(input, project.name)) {
+            this.context.lastTopic = "project:" + project.name;
+            this.context.mentionedProjects.push(project.name);
+            return this.getSpecificProjectResponse(project);
+          }
+        }
+        
+        // Check for specific technologies
+        for (const skill of this.knowledge.skills) {
+          if (input.includes(skill.toLowerCase())) {
+            this.context.lastTopic = "skill:" + skill;
+            this.context.mentionedSkills.push(skill);
+            return this.getSpecificSkillResponse(skill);
+          }
+        }
+        
+        // Default response for unknown queries
+        return this.randomPhrase(this.phrases.unknown);
+      }
+      
+      // Check for similar terms (for fuzzy matching)
+      containsSimilar(input, term) {
+        const simplifiedInput = input.replace(/[^a-z0-9\s]/g, '');
+        const simplifiedTerm = term.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+        const termParts = simplifiedTerm.split(' ');
+        
+        // Check if significant parts of multi-word terms are present
+        if (termParts.length > 1) {
+          const significantParts = termParts.filter(part => part.length > 3);
+          return significantParts.some(part => simplifiedInput.includes(part));
+        }
+        
+        return false;
+      }
+      
+      // Helper method to check if input contains any of the given keywords
+      containsAny(input, keywords) {
+        return keywords.some(keyword => input.includes(keyword.toLowerCase()));
+      }
+      
+      // Helper method to get a random phrase from an array
+      randomPhrase(phrases) {
+        return phrases[Math.floor(Math.random() * phrases.length)];
+      }
+      
+      // Generate follow-up responses based on context
+      getFollowUpResponse(lastTopic) {
+        if (lastTopic.startsWith("project:")) {
+          const projectName = lastTopic.split(":")[1];
+          const project = this.knowledge.projects.find(p => p.name === projectName);
+          if (project) {
+            return "Let me share some more interesting details about " + project.name + ". " +
+                   "The project used " + project.technologies.join(', ') + " to create a unique solution. " +
+                   project.personalInsight + " " +
+                   "The most significant outcome was " + project.outcomes.split('.')[0] + ". " +
+                   this.randomPhrase(this.phrases.confirmation);
+          }
+        } else if (lastTopic.startsWith("skill:")) {
+          const skillName = lastTopic.split(":")[1];
+          return "To elaborate more on " + skillName + ", Yusuf has used this technology in several projects including " +
+                 this.getProjectsUsingSkill(skillName).map(p => p.name).join(', ') + ". " +
+                 "He particularly enjoys using it for creating interactive and engaging user experiences. " +
+                 this.randomPhrase(this.phrases.confirmation);
+        } else if (lastTopic === "skills") {
+          return "To give you more insight into Yusuf's technical abilities, he specializes in creating immersive 3D web experiences using Three.js and WebGL. " +
+                 "His frontend expertise includes modern frameworks like React and Next.js, while his backend skills encompass Node.js and various database technologies. " +
+                 "He's particularly passionate about the intersection of design and development, with strong skills in both UI/UX design and implementation. " +
+                 this.randomPhrase(this.phrases.confirmation);
+        } else if (lastTopic === "projects") {
+          return "Looking deeper into Yusuf's portfolio, his projects demonstrate a consistent focus on creating immersive, interactive experiences. " +
+                 "His most technically challenging work was probably the Particle Physics Simulator, while the Immersive VR Gallery showcases his artistic side. " +
+                 "Each project reflects his philosophy of using technology to enhance human creativity and connection. " +
+                 this.randomPhrase(this.phrases.confirmation);
+        } else if (lastTopic === "experience") {
+          return "Regarding Yusuf's professional journey, his career progression shows a consistent growth in both technical and leadership skills. " +
+                 "At TechInnovate, he's now leading a team of developers while still maintaining hands-on involvement in cutting-edge projects. " +
+                 "His experience across different companies has given him exposure to various industries including e-commerce, education, and creative technology. " +
+                 this.randomPhrase(this.phrases.confirmation);
+        } else if (lastTopic === "about") {
+          return "Here's something interesting about Yusuf: " + this.randomPhrase(this.knowledge.about.funFacts) + ". " +
+                 "His diverse interests in both technology and arts inform his creative approach to development. " +
+                 "He believes that the best digital experiences come from understanding both human psychology and technical possibilities. " +
+                 this.randomPhrase(this.phrases.confirmation);
+        }
+        
+        // Default follow-up if context is unclear
+        return "I'd be happy to elaborate! What specific aspect of Yusuf's work are you most interested in? " +
+               "His technical skills, project details, or perhaps his professional experience?";
+      }
+      
+      // Get projects that use a specific skill
+      getProjectsUsingSkill(skill) {
+        return this.knowledge.projects.filter(project => 
+          project.technologies.some(tech => tech.toLowerCase() === skill.toLowerCase())
+        );
+      }
+      
+      // Generate response about skills
+      getSkillsResponse() {
+        const skillGroups = {
+          frontend: this.knowledge.skills.slice(0, 6),
+          backend: this.knowledge.skills.slice(6, 10),
+          design: this.knowledge.skills.slice(10)
+        };
+        
+        // Personalize the response based on conversation context
+        let response = "";
+        
+        if (this.context.questionCount === 1) {
+          response = "Yusuf has expertise in a diverse range of technologies. ";
+        } else if (this.context.mentionedProjects.length > 0) {
+          response = "Beyond what you've seen in his " + this.context.mentionedProjects[this.context.mentionedProjects.length - 1] + " project, Yusuf's skills span several domains. ";
+        } else {
+          response = "Yusuf has cultivated a versatile skill set throughout his career. ";
+        }
+        
+        response += "His core frontend expertise includes " + 
+               skillGroups.frontend.join(', ') + 
+               ". He's also proficient in backend technologies like " + 
+               skillGroups.backend.join(', ') + 
+               ", and has design skills with " + 
+               skillGroups.design.join(', ') + 
+               ".
+
+His specialty and passion lie in creating immersive 3D web experiences using Three.js and WebGL, where he combines technical precision with creative vision. " + 
+               this.randomPhrase(this.phrases.confirmation);
+        
+        return response;
+      }
+      
+      // Generate response about projects
+      getProjectsResponse() {
+        const featuredProjects = this.knowledge.projects.slice(0, 3);
+        let response = "";
+        
+        if (this.context.questionCount === 1) {
+          response = "Yusuf has worked on several innovative projects that showcase his technical skills and creative vision. ";
+        } else if (this.context.mentionedSkills.length > 0) {
+          response = "Yusuf has applied his " + this.context.mentionedSkills[this.context.mentionedSkills.length - 1] + " skills in several impressive projects. ";
+        } else {
+          response = "Yusuf's portfolio features a diverse range of projects that demonstrate his versatility as a developer. ";
+        }
+        
+        response += "Some highlights include:
+
+";
+        
+        featuredProjects.forEach((project, index) => {
+          response += "• " + project.name + " - " + project.description;
+          if (index < featuredProjects.length - 1) {
+            response += "
+";
+          } else {
+            response += "
+
+";
+          }
+        });
+        
+        response += "He has " + this.knowledge.projects.length + " major projects in his portfolio, each demonstrating different aspects of his technical and creative abilities. Would you like to know more about any specific project? " + this.randomPhrase(this.phrases.confirmation);
+        return response;
+      }
+      
+      // Generate response about a specific project
+      getSpecificProjectResponse(project) {
+        let response = project.name + " is one of Yusuf's standout projects. " + project.longDescription + "
+
+";
+        
+        response += "Technologies used: " + project.technologies.join(', ') + "
+
+";
+        response += "Key challenges: " + project.challenges + "
+
+";
+        response += "Outcomes: " + project.outcomes + "
+
+";
+        
+        // Add personal insight for more authentic response
+        if (project.personalInsight) {
+          response += "Yusuf's personal note: "" + project.personalInsight + ""
+
+";
+        }
+        
+        response += this.randomPhrase(this.phrases.confirmation);
+        return response;
+      }
+      
+      // Generate response about work experience
+      getExperienceResponse() {
+        const currentJob = this.knowledge.experience[0];
+        const previousJob = this.knowledge.experience[1];
+        
+        let response = "";
+        
+        if (this.context.questionCount === 1) {
+          response = "Yusuf has built an impressive career in creative development over the years. ";
+        } else {
+          response = "Regarding Yusuf's professional background, he's established himself as an expert in immersive web development. ";
+        }
+        
+        response += "He's currently working as a " + currentJob.role + " at " + currentJob.company + 
+               " since " + currentJob.period.split(' - ')[0] + ", where he " + currentJob.description + "
+
+" +
+               "Key achievements in this role include:
+";
+               
+        currentJob.highlights.forEach(highlight => {
+          response += "• " + highlight + "
+";
+        });
+        
+        response += "
+Previously, he was a " + previousJob.role + " at " + previousJob.company + ", where he " + 
+               previousJob.description + "
+
+" +
+               "Throughout his career, Yusuf has consistently pushed the boundaries of web technology while delivering practical solutions for real-world problems. " + 
+               this.randomPhrase(this.phrases.confirmation);
+        
+        return response;
+      }
+      
+      // Generate response about education
+      getEducationResponse() {
+        const education = this.knowledge.education;
+        
+        let response = "Yusuf has a strong academic background in computer science and interactive media. ";
+        
+        response += "He holds a " + education[0].degree + " from " + education[0].institution + 
+               " with a focus on " + education[0].focus + " (" + education[0].year + "). " +
+               education[0].description + "
+
+" +
+               "Key courses included: " + education[0].courses.join(', ') + ".
+
+" +
+               "He also earned a " + education[1].degree + " from " + education[1].institution + " (" + education[1].year + 
+               "), where " + education[1].description + "
+
+" +
+               "His academic foundation combines technical depth with creative exploration, which is evident in his professional work. " + 
+               this.randomPhrase(this.phrases.confirmation);
+        
+        return response;
+      }
+      
+      // Generate response about contact information
+      getContactResponse() {
+        const contact = this.knowledge.contact;
+        
+        let response = "";
+        
+        if (this.context.questionCount === 1) {
+          response = "If you're interested in connecting with Yusuf, he's accessible through several channels. ";
+        } else {
+          response = "Yusuf welcomes collaboration opportunities and professional connections. ";
+        }
+        
+        response += "You can reach him via email at " + contact.email + 
+               ". He's also active on professional networks including LinkedIn (" + contact.linkedin + 
+               ") and GitHub (" + contact.github + 
+               ").
+
+For project inquiries or collaboration opportunities, the contact form on this website is the most direct way to get in touch. Yusuf typically responds within 1-2 business days. " + 
+               this.randomPhrase(this.phrases.confirmation);
+        
+        return response;
+      }
+      
+      // Generate response about Yusuf personally
+      getAboutResponse() {
+        const about = this.knowledge.about;
+        
+        let response = "";
+        
+        if (this.context.questionCount === 1) {
+          response = "Let me tell you about Yusuf! ";
+        } else {
+          response = "Regarding Yusuf's background and personality, ";
+        }
+        
+        response += "He's a " + about.summary + " Based in " + about.location + 
+               ", he combines technical expertise with creative vision to build unique digital experiences.
+
+" + 
+               "Outside of work, he's passionate about " + 
+               about.interests.join(', ') + ". He speaks " + about.languages.join(', ') + ".
+
+" +
+               "An interesting fact about him: " + this.randomPhrase(about.funFacts) + "
+
+" +
+               "His professional philosophy is: "" + about.philosophy + "" This mindset guides his approach to every project he undertakes. " + 
+               this.randomPhrase(this.phrases.confirmation);
+        
+        return response;
+      }
+      
+      // Generate response about a specific skill
+      getSpecificSkillResponse(skill) {
+        const skillResponses = {
+          'Three.js': "Three.js is one of Yusuf's core skills and greatest passions. He's been working with it for over 4 years, using it to create immersive 3D environments and interactive experiences on the web. His expertise includes custom shader development, performance optimization for complex scenes, and integrating Three.js with modern frameworks like React.
+
+He's built several notable projects with Three.js, including the Immersive VR Gallery and AI Music Visualizer. Yusuf stays current with the latest Three.js developments and has contributed to community discussions and resources.",
+          'WebGL': "Yusuf has extensive experience with WebGL, both directly and through libraries like Three.js. He can create custom shaders and optimize rendering pipelines for maximum performance across devices. His Particle Physics Simulator project showcases his advanced WebGL skills, processing thousands of particles while maintaining smooth performance.
+
+He particularly enjoys the challenge of making complex visual effects accessible on web browsers, and has developed techniques for progressive enhancement to ensure experiences degrade gracefully on less powerful devices.",
+          'React': "Yusuf is highly proficient in React and often combines it with Three.js using libraries like React Three Fiber for building interactive 3D applications. He embraces React's component-based architecture to create maintainable, scalable applications with sophisticated UI requirements.
+
+He's used React in most of his recent projects, including the Blockchain Data Visualization Platform, where he created a complex dashboard with real-time data visualization. Yusuf keeps up with the latest React patterns and best practices, including hooks, context, and state management solutions.",
+          'Next.js': "Yusuf uses Next.js as his preferred React framework for creating performant, SEO-friendly web applications with server-side rendering capabilities. He appreciates its file-based routing system and built-in optimization features that help deliver fast-loading experiences.
+
+He's implemented Next.js in several client projects, taking advantage of its hybrid rendering capabilities to deliver the best balance of performance and interactivity. Yusuf is experienced with Next.js API routes, image optimization, and deployment strategies.",
+          'Blender 3D': "Yusuf has solid skills in Blender for creating and modifying 3D models that he uses in his web projects. He specializes in optimizing high-quality models for real-time web rendering, ensuring good performance while maintaining visual quality.
+
+He uses Blender to create custom assets for his Three.js projects, with a workflow that includes UV mapping, texture baking, and polygon reduction techniques. While not a full-time 3D artist, his Blender skills allow him to bridge the gap between design and development in 3D web projects."
+        };
+        
+        // Get projects that use this skill
+        const relatedProjects = this.getProjectsUsingSkill(skill);
+        let projectMention = "";
+        
+        if (relatedProjects.length > 0) {
+          projectMention = "
+
+Yusuf has used " + skill + " in several projects, including " + 
+                          relatedProjects.map(p => p.name).join(', ') + ".";
+        }
+        
+        if (skillResponses[skill]) {
+          return skillResponses[skill] + projectMention + " " + this.randomPhrase(this.phrases.confirmation);
+        } else {
+          return "Yusuf is skilled in " + skill + " and uses it regularly in his projects. It's one of the many technologies he's proficient with as part of his diverse technical toolkit." + 
+                 projectMention + " " + this.randomPhrase(this.phrases.confirmation);
+        }
+      }
+    }
+    
+    // Initialize the chatbot when the document is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      const portfolioAI = new PortfolioAI();
+      
+      const chatbotInput = document.getElementById('chatbot-input-field');
+      const chatbotSend = document.getElementById('chatbot-send-button');
+      const chatbotMessages = document.getElementById('chatbot-messages');
+      
+      // Function to send a message to the chatbot
+      function sendMessage() {
+        const message = chatbotInput.value.trim();
+        if (!message) return;
+        
+        // Add user message to the chat
+        addMessage(message, 'user');
+        
+        // Clear input field
+        chatbotInput.value = '';
+        
+        // Generate response with a slight delay to simulate thinking
+        setTimeout(() => {
+          const response = portfolioAI.generateResponse(message);
+          
+          // Split response by newlines and add with delays for more natural typing effect
+          const responseLines = response.split('\n');
+          let lineIndex = 0;
+          
+          function addNextLine() {
+            if (lineIndex < responseLines.length) {
+              const line = responseLines[lineIndex];
+              if (line.trim() !== '') {
+                addMessage(line, 'bot');
+              }
+              lineIndex++;
+              
+              // Add a variable delay between lines for more natural effect
+              const delay = line.length * 10 + Math.random() * 200 + 100;
+              setTimeout(addNextLine, delay);
+            }
+          }
+          
+          // Start adding lines
+          addNextLine();
+          
+          // Make the 3D character react to the message
+          reactToMessage(message);
+        }, 800);
+      }
+      
+      // Function to add a message to the chat
+      function addMessage(text, sender) {
+        const messageElement = document.createElement('div');
+        messageElement.className = "message " + sender + "-message";
+        messageElement.textContent = text;
+        
+        chatbotMessages.appendChild(messageElement);
+        
+        // Scroll to the bottom of the chat
+        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+      }
+      
+      // Function to make the 3D character react to messages
+      function reactToMessage(message) {
+        // This would ideally connect to the Three.js character
+        // For now, we'll just log the reaction
+        const lowerMessage = message.toLowerCase();
+        
+        if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
+          console.log('Character reacts with a wave');
+        } else if (lowerMessage.includes('thanks') || lowerMessage.includes('thank you')) {
+          console.log('Character reacts with a smile');
+        } else if (lowerMessage.includes('wow') || lowerMessage.includes('amazing')) {
+          console.log('Character reacts with excitement');
+        }
+      }
+      
+      // Event listeners for sending messages
+      chatbotSend.addEventListener('click', sendMessage);
+      chatbotInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+      });
+      
+      // Add initial greeting after a short delay
+      setTimeout(() => {
+        addMessage("Hi there! I'm your portfolio guide. Ask me anything about Yusuf's skills, projects, or experience!", 'bot');
+      }, 1000);
+    });
+  </script>
+
+  <!-- Styles -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+    
+    :root {
+      --primary: #6366f1;
+      --secondary: #8b5cf6;
+      --accent: #ec4899;
+      --background-light: #f8fafc;
+      --text-light: #0f172a;
+      --background-dark: #0f172a;
+      --text-dark: #f8fafc;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      transition: background-color 0.5s ease, color 0.5s ease;
+      overflow-x: hidden;
+      margin: 0;
+      padding: 0;
+    }
+
+    body.light-mode {
+      background-color: var(--background-light);
+      color: var(--text-light);
+    }
+
+    body.dark-mode {
+      background-color: var(--background-dark);
+      color: var(--text-dark);
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .section {
+      min-height: 100vh;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 2rem;
+      opacity: 0;
+      transform: translateY(50px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+
+    .section.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .dark-mode .glass-card {
+      background: rgba(15, 23, 42, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.1);
+    }
+
+    .sound-toggle {
+      position: fixed;
+      top: 2rem;
+      right: 6rem;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .sound-toggle:hover {
+      transform: scale(1.1);
+    }
+
+    .chatbot-toggle {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 100;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.5);
+      transition: all 0.3s ease;
+    }
+
+    .chatbot-toggle:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 25px rgba(99, 102, 241, 0.7);
+    }
+
+    .chatbot-container {
+      position: fixed;
+      bottom: 5rem;
+      right: 2rem;
+      width: 350px;
+      height: 500px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 1rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      z-index: 99;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    }
+
+    .dark-mode .chatbot-container {
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--text-dark);
+    }
+
+    .chatbot-header {
+      padding: 1rem;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chatbot-messages {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+
+    .chatbot-input {
+      display: flex;
+      padding: 0.75rem;
+      border-top: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .dark-mode .chatbot-input {
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .chatbot-input input {
+      flex: 1;
+      padding: 0.75rem;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 0.5rem;
+      margin-right: 0.5rem;
+      outline: none;
+      background-color: rgba(255, 255, 255, 0.9);
+      color: var(--text-light);
+    }
+
+    .dark-mode .chatbot-input input {
+      background-color: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-dark);
+    }
+
+    .chatbot-input button {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+    }
+
+    .message {
+      margin-bottom: 1rem;
+      max-width: 80%;
+      padding: 0.75rem;
+      border-radius: 1rem;
+      animation: messageAppear 0.3s ease-out forwards;
+      opacity: 0;
+      transform: translateY(20px);
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+
+    @keyframes messageAppear {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .user-message {
+      background: #e2e8f0;
+      color: #0f172a;
+      margin-left: auto;
+      border-top-right-radius: 0;
+    }
+
+    .dark-mode .user-message {
+      background: #334155;
+      color: #f8fafc;
+    }
+
+    .bot-message {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      margin-right: auto;
+      border-top-left-radius: 0;
+    }
+
+    .progress-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 5px;
+      background: transparent;
+      z-index: 100;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+      width: 0%;
+      transition: width 0.1s ease;
+    }
+
+    .nav-dots {
+      position: fixed;
+      right: 2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      z-index: 100;
+    }
+
+    .nav-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .nav-dot.active {
+      background: var(--primary);
+      transform: scale(1.3);
+    }
+
+    .project-card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .project-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 20px 30px rgba(0, 0, 0, 0.15);
+    }
+
+    .project-tab.active {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+    }
+
+    .project-image {
+      border-radius: 0.5rem;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+
+    .project-image img {
+      width: 100%;
+      height: auto;
+      object-fit: cover;
+      transition: transform 0.5s ease;
+    }
+
+    .project-image:hover img {
+      transform: scale(1.05);
+    }
+
+    .project-tech-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .project-tech {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 1rem;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.875rem;
+    }
+
+    .glitch {
+      position: relative;
+      animation: none;
+    }
+
+    .glitch.active:before,
+    .glitch.active:after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.8;
+    }
+
+    .glitch.active:before {
+      left: 2px;
+      text-shadow: -2px 0 #ff00ff;
+      animation: glitch-animation 0.5s infinite linear alternate-reverse;
+    }
+
+    .glitch.active:after {
+      left: -2px;
+      text-shadow: 2px 0 #00ffff;
+      animation: glitch-animation 0.5s infinite linear alternate;
+    }
+
+    @keyframes glitch-animation {
+      0% {
+        clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+        transform: translate(-4px, 0);
+      }
+      20% {
+        clip-path: polygon(0 15%, 100% 15%, 100% 30%, 0 30%);
+        transform: translate(4px, 0);
+      }
+      40% {
+        clip-path: polygon(0 40%, 100% 40%, 100% 55%, 0 55%);
+        transform: translate(-4px, 0);
+      }
+      60% {
+        clip-path: polygon(0 60%, 100% 60%, 100% 70%, 0 70%);
+        transform: translate(4px, 0);
+      }
+      80% {
+        clip-path: polygon(0 80%, 100% 80%, 100% 90%, 0 90%);
+        transform: translate(-4px, 0);
+      }
+      100% {
+        clip-path: polygon(0 90%, 100% 90%, 100% 100%, 0 100%);
+        transform: translate(4px, 0);
+      }
+    }
+
+    .hologram {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hologram:after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(
+        rgba(255, 255, 255, 0),
+        rgba(255, 255, 255, 0),
+        rgba(255, 255, 255, 0.2),
+        rgba(255, 255, 255, 0)
+      );
+      transform: rotate(30deg);
+      animation: none;
+      pointer-events: none;
+    }
+
+    .hologram.active:after {
+      animation: hologram-scan 2s ease-in-out infinite;
+    }
+
+    @keyframes hologram-scan {
+      0% {
+        transform: rotate(30deg) translateY(-200%);
+      }
+      100% {
+        transform: rotate(30deg) translateY(200%);
+      }
+    }
+
+    /* Loading Screen */
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--background-dark);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease;
+    }
+
+    .loader {
+      width: 100px;
+      height: 100px;
+      border: 5px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      border-top-color: var(--primary);
+      animation: spin 1s ease-in-out infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.5rem;
+      color: white;
+      letter-spacing: 3px;
+    }
+
+    .loading-progress {
+      width: 200px;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.1);
+      margin-top: 20px;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .loading-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* Secret Easter Egg */
+    .konami-activated {
+      animation: rainbow-bg 10s linear infinite;
+    }
+
+    @keyframes rainbow-bg {
+      0% { background-color: #ff0000; }
+      17% { background-color: #ff8000; }
+      33% { background-color: #ffff00; }
+      50% { background-color: #00ff00; }
+      67% { background-color: #0000ff; }
+      83% { background-color: #8000ff; }
+      100% { background-color: #ff0000; }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .chatbot-container {
+        width: 90%;
+        right: 5%;
+        bottom: 5rem;
+      }
+      
+      .theme-toggle, .sound-toggle {
+        width: 40px;
+        height: 40px;
+      }
+      
+      .sound-toggle {
+        right: 5rem;
+      }
+      
+      .nav-dots {
+        right: 1rem;
+      }
+    }
+  </style>
+<script>
+    // Project Data
+    const projectsData = [
+      {
+        name: "Immersive VR Gallery",
+        description: "A WebXR-powered virtual art gallery with interactive exhibits and spatial audio.",
+        longDescription: "The Immersive VR Gallery is a cutting-edge web application that leverages WebXR technology to create a fully immersive virtual reality art gallery experience. Users can navigate through multiple exhibition halls, interact with artworks, and experience spatial audio that changes based on their position within the gallery. The project features custom GLSL shaders for visual effects and optimized 3D models for smooth performance across devices.",
+        technologies: ["Three.js", "WebXR", "GLSL", "Spatial Audio API", "React"],
+        challenges: "Creating a performant VR experience that works across different devices and browsers was challenging. I had to implement adaptive quality settings and optimize 3D models extensively. Another challenge was designing intuitive controls that work both in VR mode and on regular screens.",
+        outcomes: "The gallery has been used by three independent artists to showcase their work during the pandemic, attracting over 5,000 visitors. The project was featured in 'Web Designer Magazine' as an example of innovative WebXR applications.",
+        image: "https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+        link: "https://github.com/example/vr-gallery"
+      },
+      {
+        name: "Particle Physics Simulator",
+        description: "An interactive physics simulator with realistic particle effects and user controls.",
+        longDescription: "The Particle Physics Simulator is an educational tool that visualizes complex physics concepts through interactive simulations. Users can adjust parameters like gravity, friction, and particle properties to see how they affect the system in real-time. The application includes multiple simulation environments including fluid dynamics, gravitational fields, and electromagnetic interactions.",
+        technologies: ["WebGL", "React", "Physics Engine", "Web Workers", "Canvas API"],
+        challenges: "Implementing accurate physics calculations while maintaining 60fps was extremely challenging. I had to move heavy computations to Web Workers and optimize the rendering pipeline. Creating intuitive controls that allow users to manipulate complex physics parameters was also difficult.",
+        outcomes: "The simulator is now used in several university physics departments as a teaching tool. It processes over 10,000 particles simultaneously while maintaining smooth performance. The project won the 'Best Educational Web App' award at a regional tech conference.",
+        image: "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+        link: "https://github.com/example/particle-simulator"
+      },
+      {
+        name: "AI Music Visualizer",
+        description: "A real-time audio visualizer that uses AI to generate responsive 3D visuals.",
+        longDescription: "The AI Music Visualizer analyzes audio in real-time using machine learning algorithms to generate synchronized 3D visualizations. The system identifies beats, harmonies, and emotional tones in the music to create a unique visual experience for each song. Users can upload their own music or connect to streaming services to visualize their favorite tracks with customizable visual styles.",
+        technologies: ["Three.js", "TensorFlow.js", "Web Audio API", "WebGL", "React"],
+        challenges: "Training the AI to accurately detect musical features in real-time was very challenging. I had to create a custom dataset and optimize the model for browser performance. Synchronizing the visuals precisely with the audio required implementing a complex buffering system.",
+        outcomes: "The visualizer has been integrated into three music streaming platforms as a premium feature. It processes audio with less than 20ms latency, creating truly synchronized visuals. The project has been used in several live music performances and digital art installations.",
+        image: "https://images.unsplash.com/photo-1614102073832-030967418971?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+        link: "https://github.com/example/ai-visualizer"
+      },
+      {
+        name: "Interactive Story Experience",
+        description: "A narrative-driven web experience with branching storylines and 3D environments.",
+        longDescription: "The Interactive Story Experience is an immersive narrative platform that combines elements of gaming, interactive fiction, and 3D web technologies. Users navigate through a rich story world with branching narratives where their choices affect the outcome. The experience features dynamic 3D environments that transform based on story progression, character interactions with natural language processing, and adaptive music that responds to the emotional tone of the story.",
+        technologies: ["GSAP", "Three.js", "JavaScript", "Natural Language Processing", "Web Audio API"],
+        challenges: "Creating a cohesive narrative with multiple branches while maintaining high-quality 3D environments for each scenario was extremely challenging. I had to develop a custom content management system for the writers to visualize the narrative branches and implement efficient asset loading to prevent interruptions.",
+        outcomes: "The project won an award for 'Most Innovative Digital Storytelling' and has been experienced by over 50,000 users. The average session time is 45 minutes, showing strong user engagement. Several educational institutions have commissioned custom versions for interactive learning experiences.",
+        image: "https://images.unsplash.com/photo-1618346136472-090de27fe8b4?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+        link: "https://github.com/example/interactive-story"
+      },
+      {
+        name: "Augmented Reality Product Visualizer",
+        description: "An AR web application that allows users to visualize products in their real environment.",
+        longDescription: "The AR Product Visualizer enables e-commerce customers to see how products would look in their own space before purchasing. Using WebXR and advanced computer vision, the app accurately places 3D models of products in the user's environment through their device camera. Features include realistic lighting adaptation, surface detection, and interactive product customization all running directly in the browser without requiring any app installation.",
+        technologies: ["WebXR", "Three.js", "TensorFlow.js", "WebGL", "React"],
+        challenges: "Achieving accurate surface detection and lighting estimation across different devices and environments was extremely difficult. I had to implement a custom solution that combines multiple computer vision algorithms. Optimizing the 3D models to load quickly while maintaining visual quality was another significant challenge.",
+        outcomes: "The visualizer has been implemented by three furniture retailers, resulting in a 24% increase in online sales and a 35% reduction in return rates. The technology processes environment data in under 100ms, creating a seamless AR experience. It works on 95% of modern mobile devices without requiring app installation.",
+        image: "https://images.unsplash.com/photo-1633422488554-da898c253c7d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+        link: "https://github.com/example/ar-visualizer"
+      },
+      {
+        name: "Blockchain Data Visualization Platform",
+        description: "An interactive platform that visualizes blockchain data and transactions in real-time.",
+        longDescription: "The Blockchain Data Visualization Platform transforms complex blockchain data into intuitive, interactive visualizations that help users understand cryptocurrency transactions, smart contract interactions, and network activity. The platform features real-time data streaming, customizable visualization modes, and detailed analytics tools. Users can explore the relationships between addresses, track transaction flows, and identify patterns in blockchain activity through an engaging visual interface.",
+        technologies: ["D3.js", "WebSockets", "React", "Node.js", "GraphQL"],
+        challenges: "Processing and visualizing the enormous amount of blockchain data in real-time required sophisticated data management and rendering optimizations. Creating visualizations that are both informative and intuitive for users without technical blockchain knowledge was a significant UX challenge.",
+        outcomes: "The platform is now used by three cryptocurrency research firms for analysis and has over 10,000 monthly active users. It processes over 1 million blockchain events daily with sub-second latency. The visualization techniques developed for this project have been cited in two academic papers on blockchain analytics.",
+        image: "https://images.unsplash.com/photo-1639762681057-408e52192e55?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+        link: "https://github.com/example/blockchain-viz"
+      }
+    ];
+
+    // Music tracks data
+    const musicTracks = [
+      {
+        id: "background-music-1",
+        name: "Ambient Space"
+      },
+      {
+        id: "background-music-2",
+        name: "Digital Dreams"
+      },
+      {
+        id: "background-music-3",
+        name: "Tech Atmosphere"
+      }
+    ];
+
+    // Main App Logic
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize loading screen
+      const loadingScreen = document.getElementById('loading-screen');
+      const loadingProgressBar = document.getElementById('loading-progress-bar');
+      
+      // Simulate loading progress
+      let progress = 0;
+      const loadingInterval = setInterval(() => {
+        progress += Math.random() * 10;
+        if (progress > 100) progress = 100;
+        loadingProgressBar.style.width = progress + '%';
+        
+        if (progress === 100) {
+          clearInterval(loadingInterval);
+          setTimeout(() => {
+            loadingScreen.style.opacity = 0;
+            setTimeout(() => {
+              loadingScreen.style.display = 'none';
+              
+              // Start playing background music automatically
+              playCurrentTrack();
+            }, 500);
+          }, 500);
+        }
+      }, 200);
+
+      // Theme Toggle
+      const themeToggle = document.getElementById('theme-toggle');
+      const sunIcon = document.querySelector('.sun-icon');
+      const moonIcon = document.querySelector('.moon-icon');
+      
+      themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        document.body.classList.toggle('light-mode');
+        
+        if (document.body.classList.contains('light-mode')) {
+          sunIcon.style.display = 'none';
+          moonIcon.style.display = 'block';
+        } else {
+          sunIcon.style.display = 'block';
+          moonIcon.style.display = 'none';
+        }
+        
+        // Play sound effect
+        playSound('click-sound');
+      });
+
+      // Music Player - Now hidden but functional in the background
+      let currentTrackIndex = 0;
+      let isPlaying = false;
+      let musicUpdateInterval;
+      
+      // Sound Toggle - Now only controls sound effects, not background music
+      const soundToggle = document.getElementById('sound-toggle');
+      const volumeIcon = document.querySelector('.volume-icon');
+      const muteIcon = document.querySelector('.mute-icon');
+      let soundEnabled = false;
+      
+      soundToggle.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        
+        if (soundEnabled) {
+          volumeIcon.style.display = 'none';
+          muteIcon.style.display = 'block';
+          pauseCurrentTrack();
+        } else {
+          volumeIcon.style.display = 'block';
+          muteIcon.style.display = 'none';
+          playCurrentTrack();
+        }
+        
+        // Play sound effect
+        playSound('click-sound');
+      });
+      
+      function updateTrackInfo() {
+        // Track info is no longer displayed visually
+        console.log("Now playing: " + musicTracks[currentTrackIndex].name);
+      }
+      
+      function playCurrentTrack() {
+        const currentTrack = document.getElementById(musicTracks[currentTrackIndex].id);
+        currentTrack.play();
+        isPlaying = true;
+        
+        // Set up automatic track switching when one ends
+        currentTrack.onended = function() {
+          currentTrackIndex = (currentTrackIndex + 1) % musicTracks.length;
+          updateTrackInfo();
+          playCurrentTrack();
+        };
+      }
+      
+      function pauseCurrentTrack() {
+        const currentTrack = document.getElementById(musicTracks[currentTrackIndex].id);
+        currentTrack.pause();
+        isPlaying = false;
+      }
+      
+      function pauseAllTracks() {
+        musicTracks.forEach(track => {
+          const audio = document.getElementById(track.id);
+          audio.pause();
+          audio.currentTime = 0;
+        });
+      }
+
+      // Chatbot Toggle
+      const chatbotToggle = document.getElementById('chatbot-toggle');
+      const chatbotContainer = document.getElementById('chatbot-container');
+      const closeChatbot = document.getElementById('close-chatbot');
+      
+      chatbotToggle.addEventListener('click', () => {
+        chatbotContainer.style.display = 'flex';
+        playSound('click-sound');
+      });
+      
+      closeChatbot.addEventListener('click', () => {
+        chatbotContainer.style.display = 'none';
+        playSound('click-sound');
+      });
+
+      // Project Details
+      const projectDetailsContainer = document.getElementById('project-details');
+      const projectTabs = document.querySelectorAll('.project-tab');
+      const projectCards = document.querySelectorAll('.project-card');
+      
+      // Show the first project by default
+      showProjectDetails(0);
+      
+      // Add click event to tabs
+      projectTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const projectIndex = parseInt(tab.dataset.project);
+          showProjectDetails(projectIndex);
+          setActiveTab(tab);
+          playSound('click-sound');
+        });
+      });
+      
+      // Add click event to project cards
+      projectCards.forEach(card => {
+        card.addEventListener('click', () => {
+          const projectIndex = parseInt(card.dataset.project);
+          showProjectDetails(projectIndex);
+          setActiveTab(document.querySelector(`.project-tab[data-project="${projectIndex}"]`));
+          playSound('click-sound');
+          
+          // Scroll to project details
+          document.getElementById('projects').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+      
+      function showProjectDetails(index) {
+        const project = projectsData[index];
+        
+        // Create project details HTML
+        const detailsHTML = `
+          <div class="project-image">
+            <img src="${project.image}" alt="${project.name}" loading="lazy">
+          </div>
+          <h3 class="text-3xl font-bold mb-3">${project.name}</h3>
+          <div class="project-tech-list">
+            ${project.technologies.map(tech => `<span class="project-tech">${tech}</span>`).join('')}
+          </div>
+          <p class="mb-4">${project.longDescription}</p>
+          <div class="mb-6">
+            <h4 class="text-xl font-semibold mb-2">Challenges</h4>
+            <p>${project.challenges}</p>
+          </div>
+          <div class="mb-6">
+            <h4 class="text-xl font-semibold mb-2">Outcomes</h4>
+            <p>${project.outcomes}</p>
+          </div>
+          <a href="${project.link}" target="_blank" class="inline-block px-6 py-3 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white rounded-lg font-medium hover:opacity-90 transition-all">
+            View Project
+          </a>
+        `;
+        
+        // Update the container
+        projectDetailsContainer.innerHTML = detailsHTML;
+        
+        // Animate the new content
+        gsap.fromTo(projectDetailsContainer, 
+          { opacity: 0, y: 20 }, 
+          { opacity: 1, y: 0, duration: 0.5 }
+        );
+      }
+      
+      function setActiveTab(activeTab) {
+        projectTabs.forEach(tab => {
+          tab.classList.remove('active');
+        });
+        activeTab.classList.add('active');
+      }
+
+      // Section visibility and navigation
+      const sections = document.querySelectorAll('.section');
+      const navDots = document.querySelectorAll('.nav-dot');
+      const pageScrollProgressBar = document.getElementById('progress-bar');
+      
+      const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.3
+      };
+      
+      const sectionObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            // Make section visible
+            entry.target.classList.add('visible');
+            
+            // Update nav dots
+            const currentSection = entry.target.id;
+            navDots.forEach(dot => {
+              if (dot.dataset.section === currentSection) {
+                dot.classList.add('active');
+              } else {
+                dot.classList.remove('active');
+              }
+            });
+            
+            // Trigger glitch and hologram effects
+            const glitchElements = entry.target.querySelectorAll('.glitch');
+            glitchElements.forEach(el => {
+              el.classList.add('active');
+              setTimeout(() => {
+                el.classList.remove('active');
+              }, 1000);
+            });
+            
+            const hologramElements = entry.target.querySelectorAll('.hologram');
+            hologramElements.forEach(el => {
+              el.classList.add('active');
+              setTimeout(() => {
+                el.classList.remove('active');
+              }, 2000);
+            });
+          }
+        });
+      }, observerOptions);
+      
+      sections.forEach(section => {
+        sectionObserver.observe(section);
+      });
+      
+      // Nav dots click event
+      navDots.forEach(dot => {
+        dot.addEventListener('click', () => {
+          const targetSection = document.getElementById(dot.dataset.section);
+          targetSection.scrollIntoView({ behavior: 'smooth' });
+          playSound('click-sound');
+        });
+      });
+      
+      // Update progress bar on scroll
+      window.addEventListener('scroll', () => {
+        const totalHeight = document.body.scrollHeight - window.innerHeight;
+        const progress = (window.pageYOffset / totalHeight) * 100;
+        pageScrollProgressBar.style.width = `${progress}%`;
+      });
+
+      // Sound effects
+      function playSound(soundId) {
+        if (soundEnabled) return;
+        const sound = document.getElementById(soundId);
+        sound.currentTime = 0;
+        sound.play();
+      }
+      
+      // Add hover sound to interactive elements
+      const interactiveElements = document.querySelectorAll('button, a, .nav-dot, .project-card, .project-tab');
+      interactiveElements.forEach(el => {
+        el.addEventListener('mouseenter', () => {
+          playSound('hover-sound');
+        });
+      });
+
+      // Konami code easter egg
+      const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+      let konamiIndex = 0;
+      
+      document.addEventListener('keydown', (e) => {
+        if (e.key === konamiCode[konamiIndex]) {
+          konamiIndex++;
+          if (konamiIndex === konamiCode.length) {
+            // Activate easter egg
+            document.body.classList.add('konami-activated');
+            playSound('click-sound');
+            alert('Easter Egg Activated: Rainbow Mode!');
+            setTimeout(() => {
+              document.body.classList.remove('konami-activated');
+            }, 10000);
+            konamiIndex = 0;
+          }
+        } else {
+          konamiIndex = 0;
+        }
+      });
+    });
+  </script><script>
+    // 添加样式
+    const bgStyle = document.createElement('style');
+    bgStyle.textContent = `
+        .element-highlight {
+            outline: 2px solid #3b82f6 !important;
+            outline-offset: -2px !important;
+        }
+        .element-selecting * {
+            cursor: crosshair !important;
+        }
+        .component-tooltip {
+            position: fixed;
+            background: rgba(17, 24, 39, 0.9);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            z-index: 2147483646;
+            pointer-events: none;
+            transition: all 0.05s linear;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(8px);
+        }
+        .component-highlight {
+            outline: 2px dashed #3b82f6 !important;
+            outline-offset: -2px !important;
+            background-color: rgba(59, 130, 246, 0.1) !important;
+            z-index: 2147483645 !important;
+            position: relative !important;
+        }
+    `;
+    document.head.appendChild(bgStyle);
+
+    // A function to handle sending messages.
+    function sendMessage(e) {
+        // Prevent any default browser behaviour.
+        e.preventDefault();
+    
+        // Send a message to the receiver window.
+        if (window.parent !== window && window.top !== window) {
+            window.parent.postMessage({
+                type: 'URL_CHANGE',
+                url: window.location.href
+            }, '*');
+        }
+    }
+    
+    // Add an event listener that will execute the sendMessage() function
+    window.addEventListener('load', sendMessage);
+    window.addEventListener("hashchange", sendMessage);
+    window.addEventListener("popstate", sendMessage);
+
+    // elementor selector script
+    let currentHighlight = null;
+    let isSelecting = false;
+    
+    // send message to parent window to notify that the iframe is ready
+    function notifyReady() {
+        if (window.parent !== window && window.top !== window) {
+            window.parent.postMessage({
+                type: 'IFRAME_READY',
+                url: window.location.href
+            }, '*');
+        }
+    }
+    
+    // send message to parent window to report an error
+    function reportError(message) {
+        if (window.parent !== window && window.top !== window) {
+            window.parent.postMessage({
+                type: 'SELECTOR_ERROR',
+                message: message
+            }, '*');
+        }
+    }
+    
+    function getElementPath(element) {
+        try {
+            const path = [];
+            while (element && element.nodeType === Node.ELEMENT_NODE) {
+                let selector = element.nodeName.toLowerCase();
+                if (element.id) {
+                    selector += '#' + element.id;
+                } else {
+                    let nth = 1;
+                    let sib = element;
+                    while (sib.previousElementSibling) {
+                        if (sib.previousElementSibling.nodeName === element.nodeName) nth++;
+                        sib = sib.previousElementSibling;
+                    }
+                    if (nth !== 1) selector += ':nth-of-type(' + nth + ')';
+                }
+                path.unshift(selector);
+                element = element.parentNode;
+            }
+            return path.join(' > ');
+        } catch (error) {
+            reportError('Failed to get element path: ' + error.message);
+            return '';
+        }
+    }
+    
+    function findComponentElement(element) {
+        let current = element;
+        while (current && current !== document.body) {
+            if (current.hasAttribute('data-buildglarecomponent')) {
+                return current;
+            }
+            current = current.parentElement;
+        }
+        return null;
+    }
+    
+    function getElementInfo(element) {
+        try {
+            const info = {
+                selector: getElementPath(element),
+                elementId: element.id || null,
+                elementClasses: Array.from(element.classList) || [],
+                url: window.location.href
+            };
+            
+            // 查找最近的组件元素
+            const componentElement = findComponentElement(element);
+            if (componentElement) {
+                info.componentName = componentElement.getAttribute('data-buildglarecomponent');
+            }
+            
+            return info;
+        } catch (error) {
+            reportError('Failed to get element info: ' + error.message);
+            return null;
+        }
+    }
+    
+    function handleMouseMove(e) {
+        try {
+            if (!isSelecting) return;
+            if (currentHighlight) {
+                currentHighlight.classList.remove('element-highlight');
+            }
+            currentHighlight = e.target;
+            e.target.classList.add('element-highlight');
+            e.preventDefault();
+            e.stopPropagation();
+        } catch (error) {
+            reportError('Mouse move error: ' + error.message);
+        }
+    }
+    
+    function handleClick(e) {
+        try {
+            if (!isSelecting) return;
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const elementInfo = getElementInfo(e.target);
+            if (elementInfo) {
+                window.parent.postMessage({
+                    type: 'ELEMENT_SELECTED',
+                    ...elementInfo
+                }, '*');
+            }
+            
+            disableElementSelector();
+        } catch (error) {
+            reportError('Click error: ' + error.message);
+        }
+    }
+    
+    function enableElementSelector() {
+        try {
+            isSelecting = true;
+            document.body.classList.add('element-selecting');
+            document.addEventListener('mousemove', handleMouseMove, true);
+            document.addEventListener('click', handleClick, true);
+        } catch (error) {
+            reportError('Failed to enable selector: ' + error.message);
+        }
+    }
+    
+    function disableElementSelector() {
+        try {
+            isSelecting = false;
+            document.removeEventListener('mousemove', handleMouseMove, true);
+            document.removeEventListener('click', handleClick, true);
+            if (currentHighlight) {
+                currentHighlight.classList.remove('element-highlight');
+                currentHighlight = null;
+            }
+            document.body.classList.remove('element-selecting');
+        } catch (error) {
+            reportError('Failed to disable selector: ' + error.message);
+        }
+    }
+    
+    // listen for messages from parent window
+    window.addEventListener('message', function(event) {
+        try {
+            if (event.data.type === 'START_ELEMENT_SELECTOR') {
+                enableElementSelector();
+            } else if (event.data.type === 'STOP_ELEMENT_SELECTOR') {
+                disableElementSelector();
+            } else if (event.data.type === 'CHECK_READY') {
+                window.parent.postMessage({
+                    type: 'CHECK_READY_RESPONSE',
+                    isReady: document.readyState === 'complete',
+                    url: window.location.href
+                }, '*');
+            }
+        } catch (error) {
+            reportError('Message handling error: ' + error.message);
+        }
+    });
+    
+    // notify parent window that the iframe is ready
+    window.addEventListener('load', notifyReady);
+    window.addEventListener('hashchange', notifyReady);
+    window.addEventListener('popstate', notifyReady);
+    
+    // check if the iframe is ready and notify parent window
+    if (document.readyState === 'complete') {
+        notifyReady();
+    }
+
+    // 创建组件提示工具 DOM
+    let tooltip = document.createElement('div');
+    tooltip.className = 'component-tooltip';
+    tooltip.style.display = 'none';
+    document.body.appendChild(tooltip);
+
+    // 用于跟踪当前高亮的元素
+    let currentComponentHighlight = null;
+
+    // 处理鼠标移动
+    const handleComponentMouseMove = (e) => {
+        if (isSelecting) return; // 如果正在使用元素选择器，不显示组件提示
+
+        let target = e.target;
+        
+        // 移除当前高亮
+        if (currentComponentHighlight) {
+            currentComponentHighlight.classList.remove('component-highlight');
+            currentComponentHighlight = null;
+        }
+        
+        // 查找最近的带有 data-buildglarecomponent 属性的祖先元素
+        while (target && target !== document.body) {
+            if (target.hasAttribute('data-buildglarecomponent')) {
+                // 添加高亮效果
+                target.classList.add('component-highlight');
+                currentComponentHighlight = target;
+                
+                // 更新提示工具位置和内容
+                tooltip.style.display = 'block';
+                
+                // 计算位置，确保提示框不会超出视口
+                const rect = target.getBoundingClientRect();
+                const tooltipX = Math.min(
+                    e.clientX + 10, 
+                    window.innerWidth - tooltip.offsetWidth - 10
+                );
+                const tooltipY = Math.min(
+                    e.clientY + 10, 
+                    window.innerHeight - tooltip.offsetHeight - 10
+                );
+                
+                tooltip.style.left = tooltipX + 'px';
+                tooltip.style.top = tooltipY + 'px';
+                tooltip.textContent = 'This is ' + target.getAttribute('data-buildglarecomponent') + ' component';
+                return;
+            }
+            target = target.parentElement;
+        }
+        
+        // 如果没有找到组件，隐藏提示工具
+        tooltip.style.display = 'none';
+    };
+
+    // 监听鼠标移动事件
+    document.addEventListener('mousemove', handleComponentMouseMove);
+
+    // 处理滚动事件
+    const handleScroll = () => {
+        tooltip.style.display = 'none';
+        if (currentComponentHighlight) {
+            currentComponentHighlight.classList.remove('component-highlight');
+            currentComponentHighlight = null;
+        }
+    };
+
+    // 监听滚动事件
+    document.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('scroll', handleScroll, true);
+
+    // 监听窗口大小改变事件
+    window.addEventListener('resize', handleScroll);
+</script>
+      <div id="dev-warning-banner" class="fixed inset-x-0 top-0 z-[2147483647]">
+        <!-- Animated background -->
+        <div class="absolute inset-0 bg-gradient-to-r from-yellow-50 via-yellow-100 to-yellow-50 animate-gradient"></div>
+        
+        <!-- Main content -->
+        <div class="relative mx-auto max-w-7xl py-1.5 px-2 sm:px-4">
+          <div class="flex items-center justify-between gap-2">
+            <!-- Left side with warning icon and text -->
+            <div class="flex items-center gap-1.5 min-w-0">
+              <!-- Warning Icon -->
+              <span class="flex-shrink-0">
+                <svg class="h-4 w-4 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </span>
+
+              <!-- Dev Mode Badge -->
+              <span class="flex-shrink-0 text-xs sm:text-sm font-medium text-amber-900">
+                <span class="rounded bg-amber-100 px-1 py-0.5 font-medium">DEV Mode</span>
+              </span>
+
+              <!-- Publish Text -->
+              <div class="flex items-center text-xs sm:text-sm text-amber-800 whitespace-nowrap overflow-hidden">
+                <span class="mx-1 hidden sm:inline">·</span>
+                <span class="inline-flex items-center gap-1">
+                  <span class="hidden lg:inline">You're in development environment.</span>
+                  <span class="hidden md:inline lg:inline">Please</span>
+                  Click
+                  <svg class="w-3.5 h-3.5 flex-shrink-0" xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'>
+                    <path stroke-linecap='round' stroke-linejoin='round' d='M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z' />
+                  </svg>
+                  to publish
+                  <span class="hidden lg:inline">to production</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Right side with checkbox and close button -->
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <label class="flex items-center cursor-pointer">
+                <input type="checkbox" id="dev-warning-checkbox" class="h-3 w-3 rounded border-amber-300 text-amber-600 focus:ring-amber-600">
+                <span class="ml-1 text-xs text-amber-700 whitespace-nowrap">
+                  <span class="hidden sm:inline">Don't show again</span>
+                  <span class="inline sm:hidden">Don't show</span>
+                </span>
+              </label>
+              <button type="button" class="group p-0.5" onclick="closeBanner()" aria-label="Close banner">
+                <svg class="h-3.5 w-3.5 text-amber-600 group-hover:text-amber-700" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <style>
+          @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          .animate-gradient {
+            background-size: 200% 200%;
+            animation: gradient 15s ease infinite;
+          }
+        </style>
+
+        <script>
+          // Check if banner should be hidden
+          if (localStorage.getItem('hideDevWarning') === 'true') {
+            document.getElementById('dev-warning-banner').style.display = 'none';
+          }
+
+          function closeBanner() {
+            const banner = document.getElementById('dev-warning-banner');
+            const checkbox = document.getElementById('dev-warning-checkbox');
+            
+            if (checkbox.checked) {
+              localStorage.setItem('hideDevWarning', 'true');
+            }
+            
+            banner.style.opacity = '0';
+            banner.style.transform = 'translateY(-100%)';
+            banner.style.transition = 'all 0.3s ease-out';
+            
+            setTimeout(() => {
+              banner.style.display = 'none';
+            }, 300);
+          }
+        </script>
+      </div>
+      
+</body>
+</html>
